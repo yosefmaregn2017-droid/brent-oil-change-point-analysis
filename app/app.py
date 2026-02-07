@@ -1,58 +1,45 @@
-from flask import Flask, jsonify
+from flask import Flask, render_template
 import pandas as pd
-import os
+import plotly.express as px
 
 app = Flask(__name__)
 
-# Paths to your CSV files
-DATA_FOLDER = os.path.join(os.getcwd(), "data")
-PRICE_FILE = os.path.join(DATA_FOLDER, "BrentOilPrices.csv")
-EVENTS_FILE = os.path.join(DATA_FOLDER, "BrentOilEvents.csv")
+PRICE_FILE = 'data/BrentOilPrices.csv'
 
-# Load data once on server start
-try:
-    df_prices = pd.read_csv(PRICE_FILE, parse_dates=['Date'])
-    df_events = pd.read_csv(EVENTS_FILE, parse_dates=['Date'])
-except FileNotFoundError as e:
-    print(f"File not found: {e}")
-    df_prices = pd.DataFrame()
-    df_events = pd.DataFrame()
-
-
-@app.route("/")
+@app.route('/')
 def home():
-    return jsonify({"message": "Brent Oil Analysis API is running"})
+    return "Brent Oil Change Point Analysis App"
 
+@app.route('/plot')
+def plot():
+    df_prices = pd.read_csv(PRICE_FILE, parse_dates=['Date'])
+    fig = px.line(df_prices, x='Date', y='Price', title='Brent Oil Prices')
+    graph_html = fig.to_html(full_html=False)
+    return graph_html
 
-@app.route("/prices")
-def get_prices():
-    """Return Brent Oil price data"""
-    if df_prices.empty:
-        return jsonify({"error": "Price data not loaded"}), 404
-    return jsonify(df_prices.to_dict(orient="records"))
-
-
-@app.route("/events")
-def get_events():
-    """Return Brent Oil events data"""
-    if df_events.empty:
-        return jsonify({"error": "Events data not loaded"}), 404
-    return jsonify(df_events.to_dict(orient="records"))
-
-
-@app.route("/change-points")
-def get_change_points():
-    """Return placeholder for change point analysis results"""
-    # You can later replace this with your model output
-    return jsonify({
-        "message": "Change point analysis endpoint",
-        "change_points": [
-            "2020-03-01",
-            "2021-06-15",
-            "2022-02-10"
-        ]
-    })
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
+from flask import render_template_string
+import plotly.express as px
+
+# Plot route
+@app.route("/plot")
+def plot():
+    # Create a simple line chart of Brent Oil prices
+    fig = px.line(df_prices, x="Date", y="Price", title="Brent Oil Prices Over Time")
+    
+    # Render the chart as HTML
+    graph_html = fig.to_html(full_html=False)
+    
+    # Return as a web page
+    return render_template_string("""
+        <html>
+            <head>
+                <title>Brent Oil Prices</title>
+            </head>
+            <body>
+                <h1>Brent Oil Prices Chart</h1>
+                {{ graph | safe }}
+            </body>
+        </html>
+    """, graph=graph_html)
